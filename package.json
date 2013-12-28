@@ -1,0 +1,16 @@
+{
+  "name": "deva",
+  "version": "0.0.0",
+  "description": "dev script",
+  "repository": "git://github.com/gsf/deva.git",
+  "license": "ISC",
+  "dependencies": {
+    "detective": "~2.2.0",
+    "resolve": "~0.6.1",
+    "logstamp": "~0.5.2",
+    "filewatcher": "~1.0.0",
+    "glob": "~3.2.7"
+  },
+  "preferGlobal": true,
+  "bin": "./cli.js"
+}
