@@ -5,18 +5,36 @@ var fork = require('child_process').fork
 var glob = require('glob')
 var logstamp = require('logstamp')
 var resolve = require('resolve')
-var watcher = require('filewatcher')()
+var filewatcher = require('filewatcher')
+var watchify = require('watchify')
 
 // Timestamp logs
 logstamp(function () {return new Date().toISOString() + ' [deva] '})
 
+var child = {}
 function startServer () {
   console.log('Starting server.js')
-  return fork('server.js', {env: process.env})
+  child = fork('server.js', {env: process.env})
 }
-var child = startServer()
+
+var w = watchify('./browser/main.js')
+function bundle (cb) {
+  console.log('Browserifying browser/main.js')
+  var p = w.bundle()
+  p.pipe(fs.createWriteStream('static/script.js'))
+  if (cb) p.on('end', cb)
+}
+w.on('update', function () {
+  bundle()
+})
+
+var templateWatcher = filewatcher()
+templateWatcher.on('change', function (file, mtime) {
+  bundle()
+})
 
 var cwd = process.cwd()
+var watcher = filewatcher()
 function watchRequires () {
   detective(fs.readFileSync('server.js')).forEach(function (name) {
     var p = resolve.sync(name, {basedir: cwd})
@@ -26,37 +44,33 @@ function watchRequires () {
     }
   })
 }
-
-function watchStatic () {
-  glob.sync('static/**').forEach(function (file) {
-    watcher.add(file)
-  })
-}
-
-function watchTemplates () {
-  glob.sync('templates/**/*.html').forEach(function (file) {
-    watcher.add(file)
-  })
-}
-
-function watchAll () {
-  console.log('Adding files to watcher')
-  watcher.add('server.js')
-  watchRequires()
-  watchStatic()
-  watchTemplates()
-}
-watchAll()
-
 watcher.on('change', function (file, mtime) {
   console.log('Changed file:', file)
   if (child.connected) {
     console.log('Killing server.js')
     child.kill()
   }
-  watcher.removeAll()
+  unwatchAll()
   setTimeout(function () {
-    child = startServer()
     watchAll()
+    startServer()
   }, 50)
+})
+
+function watchAll () {
+  console.log('Adding files to watcher')
+  watchRequires()
+  watcher.add('server.js')
+  glob.sync('static/**').forEach(watcher.add, watcher)
+  glob.sync('templates/**').forEach(templateWatcher.add, templateWatcher)
+}
+
+function unwatchAll () {
+  watcher.removeAll()
+  templateWatcher.removeAll()
+}
+
+bundle(function () {
+  watchAll()
+  startServer()
 })

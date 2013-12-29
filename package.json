@@ -9,7 +9,8 @@
     "resolve": "~0.6.1",
     "logstamp": "~0.5.2",
     "filewatcher": "~1.0.0",
-    "glob": "~3.2.7"
+    "glob": "~3.2.7",
+    "watchify": "~0.5.0"
   },
   "preferGlobal": true,
   "bin": "./cli.js"
