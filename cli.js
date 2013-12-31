@@ -20,9 +20,13 @@ function startServer () {
 var w = watchify('./browser/main.js')
 function bundle (cb) {
   console.log('Browserifying browser/main.js')
-  var p = w.bundle()
-  p.pipe(fs.createWriteStream('static/script.js'))
-  if (cb) p.on('end', cb)
+  var p = w.bundle({debug: true})
+  var s = fs.createWriteStream('static/script.js')
+  p.pipe(s)
+  p.on('error', function (err) {
+    console.error(err.stack)
+  })
+  if (cb) s.on('finish', cb)
 }
 w.on('update', function () {
   bundle()
@@ -35,8 +39,16 @@ templateWatcher.on('change', function (file, mtime) {
 
 var cwd = process.cwd()
 var watcher = filewatcher()
+var watchSuccess = true
 function watchRequires () {
-  detective(fs.readFileSync('server.js')).forEach(function (name) {
+  var requires = []
+  try {
+    requires = detective(fs.readFileSync('server.js'))
+  } catch (e) {
+    watchSuccess = false
+    console.error(e.stack)
+  }
+  requires.forEach(function (name) {
     var p = resolve.sync(name, {basedir: cwd})
     if (p.indexOf(cwd) === 0) {
       p = p.substr(cwd.length + 1)
