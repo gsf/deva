@@ -58,6 +58,10 @@ function watchRequires () {
 }
 watcher.on('change', function (file, mtime) {
   console.log('Changed file:', file)
+  restart()
+})
+
+function restart () {
   if (child.connected) {
     console.log('Killing server.js')
     child.kill()
@@ -67,7 +71,7 @@ watcher.on('change', function (file, mtime) {
     watchAll()
     startServer()
   }, 50)
-})
+}
 
 function watchAll () {
   console.log('Adding files to watcher')
@@ -85,4 +89,10 @@ function unwatchAll () {
 bundle(function () {
   watchAll()
   startServer()
+})
+
+process.stdin.resume()
+process.stdin.setEncoding('utf8')
+process.stdin.on('data', function (chunk) {
+  restart()
 })
