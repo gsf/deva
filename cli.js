@@ -53,14 +53,7 @@ var cwd = process.cwd()
 var watcher = filewatcher()
 var watchSuccess = true
 function watchRequires () {
-  var requires = []
-  try {
-    requires = detective(fs.readFileSync('server.js'))
-  } catch (e) {
-    watchSuccess = false
-    console.error(e.stack)
-  }
-  requires.forEach(function (name) {
+  detective(fs.readFileSync('server.js')).forEach(function (name) {
     var p = resolve.sync(name, {basedir: cwd})
     if (p.indexOf(cwd) === 0) {
       p = p.substr(cwd.length + 1)
@@ -87,7 +80,12 @@ function restart () {
 
 function watchAll () {
   console.log('Adding files to watcher')
-  watchRequires()
+  try {
+    watchRequires()
+  } catch (e) {
+    watchSuccess = false
+    console.error(e.stack)
+  }
   watcher.add('server.js')
   glob.sync('static/**').forEach(watcher.add, watcher)
   glob.sync('templates/**').forEach(templateWatcher.add, templateWatcher)
