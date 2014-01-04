@@ -25,8 +25,7 @@ function startServer () {
   console.log('Starting server.js')
   child = fork('server.js', {env: childEnv})
   child.on('message', function (m) {
-    console.log('message received:', m)
-    if (m === 'online' && sseRes) sseRes.write('data: reload\n\n')
+    if (m == 'online' && sseRes) sseRes.write('data: reload\n\n')
   })
 }
 
