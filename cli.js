@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 var detective = require('detective')
+var dirname = require('path').dirname
 var fs = require('fs')
 var fork = require('child_process').fork
 var glob = require('glob')
 var http = require('http')
 var logstamp = require('logstamp')
+var mkdirp = require('mkdirp')
 var resolve = require('resolve')
 var filewatcher = require('filewatcher')
 var watchify = require('watchify')
@@ -16,6 +18,9 @@ var port = process.env.PORT || 1028;
 var childPort = Math.floor(Math.random()*(Math.pow(2,16)-1024)+1024)
 var childEnv = process.env
 childEnv.PORT = childPort
+
+var bundlePath = 'static/scripts/bundle.js'
+mkdirp.sync(dirname(bundlePath))
 
 // TODO Pool for multiple sseRes -- only one connection gets responses now
 var sseRes;
@@ -33,7 +38,7 @@ var w = watchify('./browser/main.js')
 function bundle (cb) {
   console.log('Browserifying browser/main.js')
   var p = w.bundle({debug: true})
-  var s = fs.createWriteStream('static/script.js')
+  var s = fs.createWriteStream(bundlePath)
   p.pipe(s)
   p.on('error', function (err) {
     console.error(err.stack)
