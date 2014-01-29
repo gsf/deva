@@ -9,6 +9,7 @@ var logstamp = require('logstamp')
 var mkdirp = require('mkdirp')
 var resolve = require('resolve')
 var filewatcher = require('filewatcher')
+var sse = require('./sse')
 var watchify = require('watchify')
 
 // Timestamp logs
@@ -127,7 +128,9 @@ var server = http.createServer(function(req, res) {
       headers: req.headers
     }, function (clientRes) {
       res.writeHead(clientRes.statusCode, clientRes.headers)
-      // TODO Insert SSE reload <script> in HTML responses
+      if (clientRes.headers['content-type'] == 'text/html') {
+        return clientRes.pipe(sse.inject()).pipe(res)
+      }
       clientRes.pipe(res)
     })
     req.pipe(clientReq)
