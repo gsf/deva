@@ -136,4 +136,6 @@ var server = http.createServer(function(req, res) {
     req.pipe(clientReq)
   }
 })
-server.listen(port)
+server.listen(port, function () {
+  console.log('Listening on port', port)
+})
