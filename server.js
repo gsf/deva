@@ -1,66 +1,42 @@
 #!/usr/bin/env node
 var detective = require('detective')
-var dirname = require('path').dirname
 var fs = require('fs')
 var fork = require('child_process').fork
 var glob = require('glob')
 var http = require('http')
 var logstamp = require('logstamp')
-var mkdirp = require('mkdirp')
 var resolve = require('resolve')
 var filewatcher = require('filewatcher')
 var sse = require('./sse')
-var watchify = require('watchify')
 
-// Timestamp logs
-logstamp(function () {return new Date().toISOString() + ' [deva] '})
+// Stamp logs from this process
+logstamp(function () {return '[deva] '})
 
 var port = process.env.PORT || 1028;
 var childPort = Math.floor(Math.random()*(Math.pow(2,16)-1024)+1024)
 var childEnv = process.env
 childEnv.PORT = childPort
 
-var bundlePath = 'static/scripts/bundle.js'
-mkdirp.sync(dirname(bundlePath))
-
 // TODO Pool for multiple sseRes -- only one connection gets responses now
 var sseRes;
 
 var child = {}
 function startServer () {
-  console.log('Starting server.js')
+  console.log('Starting server.js process')
   child = fork('server.js', {env: childEnv})
   child.on('message', function (m) {
     if (m == 'online' && sseRes) sseRes.write('data: reload\n\n')
   })
 }
 
-var w = watchify('./browser/main.js')
-function bundle (cb) {
-  console.log('Browserifying browser/main.js')
-  var p = w.bundle({debug: true})
-  var s = fs.createWriteStream(bundlePath)
-  p.pipe(s)
-  p.on('error', function (err) {
-    console.error(err.stack)
-  })
-  if (cb) s.on('finish', cb)
-}
-w.on('update', function () {
-  bundle()
-})
-
-var templateWatcher = filewatcher()
-templateWatcher.on('change', function (file, mtime) {
-  bundle()
-})
-
 var cwd = process.cwd()
 var watcher = filewatcher()
 var watchSuccess = true
 function watchRequires () {
+  watcher.add('server.js')
   detective(fs.readFileSync('server.js')).forEach(function (name) {
     var p = resolve.sync(name, {basedir: cwd})
+    console.log(p)
     if (p.indexOf(cwd) === 0) {
       p = p.substr(cwd.length + 1)
       watcher.add(p)
@@ -74,10 +50,10 @@ watcher.on('change', function (file, mtime) {
 
 function restart () {
   if (child.connected) {
-    console.log('Killing server.js')
+    console.log('Killing server.js process')
     child.kill()
   }
-  unwatchAll()
+  watcher.removeAll()
   setTimeout(function () {
     watchAll()
     startServer()
@@ -85,27 +61,18 @@ function restart () {
 }
 
 function watchAll () {
-  console.log('Adding files to watcher')
   try {
     watchRequires()
   } catch (e) {
     watchSuccess = false
     console.error(e.stack)
   }
-  watcher.add('server.js')
   glob.sync('static/**').forEach(watcher.add, watcher)
-  glob.sync('templates/**').forEach(templateWatcher.add, templateWatcher)
+  glob.sync('templates/**').forEach(watcher.add, watcher)
 }
 
-function unwatchAll () {
-  watcher.removeAll()
-  templateWatcher.removeAll()
-}
-
-bundle(function () {
-  watchAll()
-  startServer()
-})
+watchAll()
+startServer()
 
 // Reload on any console input
 process.stdin.resume()
@@ -114,7 +81,7 @@ process.stdin.on('data', function (chunk) {
 })
 
 // Hacky proxy
-var server = http.createServer(function(req, res) {
+http.createServer(function(req, res) {
   if (RegExp('^/_sse').test(req.url)) {
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
@@ -135,7 +102,6 @@ var server = http.createServer(function(req, res) {
     })
     req.pipe(clientReq)
   }
-})
-server.listen(port, function () {
+}).listen(port, function () {
   console.log('Listening on port', port)
 })
