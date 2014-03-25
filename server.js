@@ -8,6 +8,7 @@ var logstamp = require('logstamp')
 var resolve = require('resolve')
 var filewatcher = require('filewatcher')
 var sse = require('./sse')
+var zlib = require('zlib')
 
 // Stamp logs from this process
 logstamp(function () {return '[deva] '})
@@ -96,7 +97,11 @@ http.createServer(function(req, res) {
     }, function (clientRes) {
       res.writeHead(clientRes.statusCode, clientRes.headers)
       if (clientRes.headers['content-type'] == 'text/html') {
-        return clientRes.pipe(sse.inject()).pipe(res)
+        if (clientRes.headers['content-encoding'] == 'gzip') {
+          clientRes = clientRes.pipe(zlib.Gunzip()).pipe(sse.inject()).pipe(zlib.Gzip())
+        } else {
+          clientRes = clientRes.pipe(sse.inject())
+        }
       }
       clientRes.pipe(res)
     })
