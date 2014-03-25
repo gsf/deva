@@ -36,7 +36,7 @@ function watchRequires () {
   watcher.add('server.js')
   detective(fs.readFileSync('server.js')).forEach(function (name) {
     var p = resolve.sync(name, {basedir: cwd})
-    console.log(p)
+    //console.log(p)
     if (p.indexOf(cwd) === 0) {
       p = p.substr(cwd.length + 1)
       watcher.add(p)
