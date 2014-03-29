@@ -8,7 +8,6 @@ var http = require('http')
 var logstamp = require('logstamp')
 var resolve = require('resolve')
 var filewatcher = require('filewatcher')
-var sse = require('./sse')
 var zlib = require('zlib')
 
 // Stamp logs from this process
@@ -84,7 +83,7 @@ process.stdin.on('data', function (chunk) {
 
 // Hacky proxy
 http.createServer(function(req, res) {
-  if (RegExp('^/_sse').test(req.url)) {
+  if (RegExp('^/_reload').test(req.url)) {
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'close')
@@ -99,13 +98,6 @@ http.createServer(function(req, res) {
       headers: req.headers
     }, function (clientRes) {
       res.writeHead(clientRes.statusCode, clientRes.headers)
-      if (clientRes.headers['content-type'] == 'text/html') {
-        if (clientRes.headers['content-encoding'] == 'gzip') {
-          clientRes = clientRes.pipe(zlib.Gunzip()).pipe(sse.inject()).pipe(zlib.Gzip())
-        } else {
-          clientRes = clientRes.pipe(sse.inject())
-        }
-      }
       clientRes.pipe(res)
     })
     req.pipe(clientReq)
