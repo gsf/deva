@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 var detective = require('detective')
+var EventEmitter = require('events').EventEmitter
 var fs = require('fs')
 var fork = require('child_process').fork
 var glob = require('glob')
@@ -18,15 +19,15 @@ var childPort = Math.floor(Math.random()*(Math.pow(2,16)-1024)+1024)
 var childEnv = process.env
 childEnv.PORT = childPort
 
-// TODO Pool for multiple sseRes -- only one connection gets responses now
-var sseRes;
+// A long-lived thing to pass on messages from fleeting children
+var dispatcher = new EventEmitter();
 
 var child = {}
 function startServer () {
   console.log('Starting server.js process')
   child = fork('server.js', {env: childEnv})
   child.on('message', function (m) {
-    if (m == 'online' && sseRes) sseRes.write('data: reload\n\n')
+    if (m == 'online') dispatcher.emit('childOnline')
   })
 }
 
@@ -87,7 +88,9 @@ http.createServer(function(req, res) {
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'close')
-    sseRes = res
+    dispatcher.on('childOnline', function () {
+      res.write('data: reload\n\n')
+    })
   } else {
     var clientReq = http.request({
       port: childPort,
