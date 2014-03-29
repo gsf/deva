@@ -12,6 +12,6 @@
     "glob": "~3.2.7",
     "mkdirp": "~0.3.5"
   },
-  "preferGlobal": true,
-  "bin": "./server.js"
+  "bin": "./server.js",
+  "browser": "./browser.js"
 }

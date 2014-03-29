@@ -10,9 +10,8 @@ Just run it in the directory where your server.js can be found.
 
 To get the automatic reload working, do two things:
 
-1. Include `if (process.send) process.send('online')` in the callback for your
-server's listen method.
-2. Include the following somewhere on the client side:
+1. Include `if (process.send) process.send('online')` in the callback for your server's listen method.
+2. Include the following somewhere on the client side (or simply `require('deva')` with browserify):
 
 ```js
 (new EventSource('/_reload')).onmessage = function (e) {
