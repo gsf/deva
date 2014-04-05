@@ -101,6 +101,7 @@ http.createServer(function(req, res) {
       clientRes.pipe(res)
     })
     req.pipe(clientReq)
+    clientReq.on('error', function (e) {console.error(e.message)})
   }
 }).listen(port, function () {
   console.log('Listening on port', port)
