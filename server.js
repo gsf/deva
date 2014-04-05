@@ -87,7 +87,7 @@ http.createServer(function(req, res) {
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'close')
-    dispatcher.on('childOnline', function () {
+    dispatcher.once('childOnline', function () {
       res.write('data: reload\n\n')
     })
   } else {
