@@ -1,0 +1,14 @@
+[watch]
+imports = server.js
+include = static/**
+exclude = node_modules/**
+
+[watch.js]
+command = browserify -d browser/main.js > static/bundle.js
+imports = browser/main.js
+include = templates/** static/*.html
+exclude = node_modules/**
+
+[watch.less]
+command = lessc less/styles.less > static/style.css
+imports = less/styles.less
