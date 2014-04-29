@@ -18,8 +18,9 @@ var config = {}
 if (fs.existsSync('.devarc')) {
   config = ini.parse(fs.readFileSync('.devarc', 'utf8'))
 }
+var startFile = config.file || 'server.js'
 
-var port = process.env.PORT || 1028;
+var port = process.env.PORT || config.port || 1028;
 var childPort = Math.floor(Math.random()*(Math.pow(2,16)-1024)+1024)
 var childEnv = process.env
 childEnv.PORT = childPort
@@ -28,9 +29,9 @@ childEnv.PORT = childPort
 var dispatcher = new EventEmitter();
 
 var child = {}
-function startServer () {
-  console.log('Starting server.js process')
-  child = fork('server.js', {env: childEnv})
+function startChild () {
+  console.log('Starting ' + startFile + ' process')
+  child = fork(startFile, {env: childEnv})
   child.on('message', function (m) {
     if (m == 'online') dispatcher.emit('childOnline')
   })
@@ -40,8 +41,8 @@ var cwd = process.cwd()
 var watcher = filewatcher()
 var watchSuccess = true
 function watchRequires () {
-  watcher.add('server.js')
-  detective(fs.readFileSync('server.js')).forEach(function (name) {
+  watcher.add(startFile)
+  detective(fs.readFileSync(startFile)).forEach(function (name) {
     var p = resolve.sync(name, {basedir: cwd})
     //console.log(p)
     if (p.indexOf(cwd) === 0) {
@@ -57,13 +58,13 @@ watcher.on('change', function (file, mtime) {
 
 function restart () {
   if (child.connected) {
-    console.log('Killing server.js process')
+    console.log('Killing ' + startFile + ' process')
     child.kill()
   }
   watcher.removeAll()
   setTimeout(function () {
     watchAll()
-    startServer()
+    startChild()
   }, 50)
 }
 
@@ -79,7 +80,7 @@ function watchAll () {
 }
 
 watchAll()
-startServer()
+startChild()
 
 // Reload on any console input
 process.stdin.resume()
