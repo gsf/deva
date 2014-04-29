@@ -5,6 +5,7 @@ var fs = require('fs')
 var fork = require('child_process').fork
 var glob = require('glob')
 var http = require('http')
+var ini = require('ini')
 var logstamp = require('logstamp')
 var resolve = require('resolve')
 var filewatcher = require('filewatcher')
@@ -12,6 +13,11 @@ var zlib = require('zlib')
 
 // Stamp logs from this process
 logstamp(function () {return '[deva] '})
+
+var config = {}
+if (fs.existsSync('.devarc')) {
+  config = ini.parse(fs.readFileSync('.devarc', 'utf8'))
+}
 
 var port = process.env.PORT || 1028;
 var childPort = Math.floor(Math.random()*(Math.pow(2,16)-1024)+1024)
