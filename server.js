@@ -39,7 +39,7 @@ function startChild () {
 
 var cwd = process.cwd()
 var watcher = filewatcher()
-var watchSuccess = true
+
 function watchRequires () {
   watcher.add(startFile)
   detective(fs.readFileSync(startFile)).forEach(function (name) {
@@ -51,6 +51,7 @@ function watchRequires () {
     }
   })
 }
+
 watcher.on('change', function (file, mtime) {
   console.log('Changed file:', file)
   restart()
@@ -69,12 +70,7 @@ function restart () {
 }
 
 function watchAll () {
-  try {
-    watchRequires()
-  } catch (e) {
-    watchSuccess = false
-    console.error(e.stack)
-  }
+  watchRequires()
   glob.sync('static/**').forEach(watcher.add, watcher)
   glob.sync('templates/**').forEach(watcher.add, watcher)
 }
