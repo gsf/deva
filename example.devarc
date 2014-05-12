@@ -1,5 +1,5 @@
 file = server.js
-require = server.js
+require = server.js  ; defaults to the value of file
 include = static/**
 exclude = node_modules/**
 
