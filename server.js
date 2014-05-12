@@ -11,8 +11,16 @@ var resolve = require('resolve')
 var filewatcher = require('filewatcher')
 var zlib = require('zlib')
 
+
 // Stamp logs from this process
 logstamp(function () {return '[deva] '})
+
+var child = {}
+var cwd = process.cwd()
+var watcher = filewatcher()
+
+// A long-lived thing to pass messages from fleeting children
+var dispatcher = new EventEmitter();
 
 function loadConfig (file) {
   return fs.existsSync(file) && ini.parse(fs.readFileSync(file, 'utf8'))
@@ -26,12 +34,9 @@ var childPort = Math.floor(Math.random()*(Math.pow(2,16)-1024)+1024)
 var childEnv = process.env
 childEnv.PORT = childPort
 
-// A long-lived thing to pass on messages from fleeting children
-var dispatcher = new EventEmitter();
+var startFile = config.file ? config.file.trim() : 'server.js'
 
-var startFile = config.file.trim() || 'server.js'
-var child = {}
-function startChild () {
+function start () {
   console.log('Starting ' + startFile + ' process')
   child = fork(startFile, {env: childEnv})
   child.on('message', function (m) {
@@ -39,25 +44,17 @@ function startChild () {
   })
 }
 
-var cwd = process.cwd()
-var watcher = filewatcher()
-
-function watchRequires () {
-  watcher.add(startFile)
-  detective(fs.readFileSync(startFile)).forEach(function (name) {
+function requireWatch (file) {
+  console.log('Adding require tree for ' + file + ' to watcher')
+  watcher.add(file)
+  detective(fs.readFileSync(file)).forEach(function (name) {
     var p = resolve.sync(name, {basedir: cwd})
-    //console.log(p)
     if (p.indexOf(cwd) === 0) {
       p = p.substr(cwd.length + 1)
       watcher.add(p)
     }
   })
 }
-
-watcher.on('change', function (file, mtime) {
-  console.log('Changed file:', file)
-  restart()
-})
 
 function restart () {
   if (child.connected) {
@@ -66,19 +63,25 @@ function restart () {
   }
   watcher.removeAll()
   setTimeout(function () {
-    watchAll()
-    startChild()
+    watch()
+    start()
   }, 50)
 }
 
-function watchAll () {
-  watchRequires()
-  glob.sync('static/**').forEach(watcher.add, watcher)
-  glob.sync('templates/**').forEach(watcher.add, watcher)
+watcher.on('change', function (file, mtime) {
+  console.log('Changed file:', file)
+  restart()
+})
+
+function watch () {
+  if (config.require === undefined) requireWatch(startFile)
+  else if (config.require) requireWatch(config.require)
+  //glob.sync('static/**').forEach(watcher.add, watcher)
+  //glob.sync('templates/**').forEach(watcher.add, watcher)
 }
 
-watchAll()
-startChild()
+watch()
+start()
 
 // Reload on any console input
 process.stdin.resume()
