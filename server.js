@@ -29,7 +29,7 @@ childEnv.PORT = childPort
 // A long-lived thing to pass on messages from fleeting children
 var dispatcher = new EventEmitter();
 
-var startFile = config.file || 'server.js'
+var startFile = config.file.trim() || 'server.js'
 var child = {}
 function startChild () {
   console.log('Starting ' + startFile + ' process')
