@@ -14,11 +14,12 @@ var zlib = require('zlib')
 // Stamp logs from this process
 logstamp(function () {return '[deva] '})
 
-var config = {}
-if (fs.existsSync('.devarc')) {
-  config = ini.parse(fs.readFileSync('.devarc', 'utf8'))
+function loadConfig (file) {
+  return fs.existsSync(file) && ini.parse(fs.readFileSync(file, 'utf8'))
 }
-var startFile = config.file || 'server.js'
+
+var config = loadConfig('.devarc') ||
+  loadConfig(process.env.HOME + '/.devarc') || {}
 
 var port = process.env.PORT || config.port || 1028;
 var childPort = Math.floor(Math.random()*(Math.pow(2,16)-1024)+1024)
@@ -28,6 +29,7 @@ childEnv.PORT = childPort
 // A long-lived thing to pass on messages from fleeting children
 var dispatcher = new EventEmitter();
 
+var startFile = config.file || 'server.js'
 var child = {}
 function startChild () {
   console.log('Starting ' + startFile + ' process')
