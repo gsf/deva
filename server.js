@@ -45,7 +45,7 @@ function start () {
 }
 
 function requireWatch (file) {
-  console.log('Adding require tree for ' + file + ' to watcher')
+  console.log('Adding files in require tree for ' + file + ' to watcher')
   watcher.add(file)
   detective(fs.readFileSync(file)).forEach(function (name) {
     var p = resolve.sync(name, {basedir: cwd})
@@ -61,6 +61,8 @@ function restart () {
     console.log('Killing ' + startFile + ' process')
     child.kill()
   }
+  // XXX Should all files be removed and added again on every restart?
+  console.log('Removing all files from watcher')
   watcher.removeAll()
   setTimeout(function () {
     watch()
@@ -73,11 +75,20 @@ watcher.on('change', function (file, mtime) {
   restart()
 })
 
+function multiGlob (globs) {
+  // Take space-separated globs and return all files
+  console.log('Adding files in "' + globs + '" to watcher')
+  var files = []
+  globs.split(/\s+/).filter(Boolean).forEach(function (x) {
+    files = files.concat(glob.sync(x))
+  })
+  return files
+}
+
 function watch () {
   if (config.require === undefined) requireWatch(startFile)
   else if (config.require) requireWatch(config.require)
-  //glob.sync('static/**').forEach(watcher.add, watcher)
-  //glob.sync('templates/**').forEach(watcher.add, watcher)
+  multiGlob(config.include).forEach(watcher.add, watcher)
 }
 
 watch()
