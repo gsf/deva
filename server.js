@@ -44,18 +44,6 @@ function start () {
   })
 }
 
-function requireWatch (file) {
-  console.log('Adding files in require tree for ' + file + ' to watcher')
-  watcher.add(file)
-  detective(fs.readFileSync(file)).forEach(function (name) {
-    var p = resolve.sync(name, {basedir: cwd})
-    if (p.indexOf(cwd) === 0) {
-      p = p.substr(cwd.length + 1)
-      watcher.add(p)
-    }
-  })
-}
-
 function restart () {
   if (child.connected) {
     console.log('Killing ' + startFile + ' process')
@@ -77,7 +65,6 @@ watcher.on('change', function (file, mtime) {
 
 function multiGlob (globs) {
   // Take space-separated globs and return all files
-  console.log('Adding files in "' + globs + '" to watcher')
   var files = []
   globs.split(/\s+/).filter(Boolean).forEach(function (x) {
     files = files.concat(glob.sync(x))
@@ -85,10 +72,28 @@ function multiGlob (globs) {
   return files
 }
 
+function requireWatch (file) {
+  console.log('Adding files in require tree for ' + file + ' to watcher')
+  watcher.add(file)
+  detective(fs.readFileSync(file)).forEach(function (name) {
+    var p = resolve.sync(name, {basedir: cwd})
+    if (p.indexOf(cwd) === 0) {
+      p = p.substr(cwd.length + 1)
+      watcher.add(p)
+    }
+  })
+}
+
+function includeWatch (globs) {
+  console.log('Adding files in "' + globs + '" to watcher')
+  multiGlob(globs).forEach(watcher.add, watcher)
+}
+
 function watch () {
   if (config.require === undefined) requireWatch(startFile)
   else if (config.require) requireWatch(config.require)
-  multiGlob(config.include).forEach(watcher.add, watcher)
+
+  if (config.include) includeWatch(config.include)
 }
 
 watch()
