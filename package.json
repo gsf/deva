@@ -11,8 +11,12 @@
     "filewatcher": "~1.0.0",
     "glob": "~3.2.7",
     "mkdirp": "~0.3.5",
-    "ini": "^1.1.0"
+    "ini": "^1.1.0",
+    "tap": "~0.4.9"
   },
   "bin": "./server.js",
-  "browser": "./browser.js"
+  "browser": "./browser.js",
+  "scripts": {
+    "test": "find test -name *-test.js | xargs -n 1 -t node"
+  }
 }
