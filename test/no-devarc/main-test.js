@@ -7,7 +7,7 @@ var test = require('tap').test
 var deva
 
 test('setup', function (t) {
-  deva = fork(__dirname + '/../../server', {cwd: __dirname})
+  deva = fork(__dirname + '/../../server', {cwd: __dirname, silent: true})
 
   // Give the server time to start up
   setTimeout(function () {
@@ -55,5 +55,6 @@ test('return file to original state', function (t) {
 
 test('teardown', function (t) {
   deva.kill()
-  t.end()
+  deva.on('exit', function () {t.end()})
+  t.on('end', function () {setTimeout(process.exit, 500)})
 })
