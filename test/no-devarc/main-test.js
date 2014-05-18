@@ -8,6 +8,7 @@ var deva
 
 test('setup', function (t) {
   deva = fork(__dirname + '/../../server', {cwd: __dirname, silent: true})
+  deva.stderr.pipe(process.stderr)
 
   // Give the server time to start up
   setTimeout(function () {
