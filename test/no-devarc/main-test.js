@@ -1,20 +1,7 @@
-var fork = require('child_process').fork
+var test = require('../wrapper')(__dirname)
 var fs = require('fs')
 var http = require('http')
-var test = require('tap').test
 
-
-var deva
-
-test('setup', function (t) {
-  deva = fork(__dirname + '/../../server', {cwd: __dirname, silent: true})
-  deva.stderr.pipe(process.stderr)
-
-  // Give the server time to start up
-  setTimeout(function () {
-    t.end()
-  }, 500)
-})
 
 test('server process responds to requests', function (t) {
   t.plan(2)
@@ -52,10 +39,4 @@ test('return file to original state', function (t) {
       })
     })
   }, 500)
-})
-
-test('teardown', function (t) {
-  deva.kill()
-  deva.on('exit', function () {t.end()})
-  t.on('end', function () {setTimeout(process.exit, 500)})
 })
