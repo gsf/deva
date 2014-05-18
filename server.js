@@ -26,6 +26,15 @@ function loadConfig (file) {
   return fs.existsSync(file) && ini.parse(fs.readFileSync(file, 'utf8'))
 }
 
+function multiGlob (globs) {
+  // Take space-separated globs and return all files
+  var files = []
+  globs.split(/\s+/).filter(Boolean).forEach(function (x) {
+    files = files.concat(glob.sync(x))
+  })
+  return files
+}
+
 var config = loadConfig('.devarc') ||
   loadConfig(process.env.HOME + '/.devarc') || {}
 
@@ -35,42 +44,6 @@ var childEnv = process.env
 childEnv.PORT = childPort
 
 var startFile = config.file ? config.file.trim() : 'server.js'
-
-function start () {
-  console.log('Starting ' + startFile + ' process')
-  child = fork(startFile, {env: childEnv})
-  child.on('message', function (m) {
-    if (m == 'online') dispatcher.emit('childOnline')
-  })
-}
-
-function restart () {
-  if (child.connected) {
-    console.log('Killing ' + startFile + ' process')
-    child.kill()
-  }
-  // XXX Should all files be removed and added again on every restart?
-  console.log('Removing all files from watcher')
-  watcher.removeAll()
-  setTimeout(function () {
-    watch()
-    start()
-  }, 50)
-}
-
-watcher.on('change', function (file, mtime) {
-  console.log('Changed file:', file)
-  restart()
-})
-
-function multiGlob (globs) {
-  // Take space-separated globs and return all files
-  var files = []
-  globs.split(/\s+/).filter(Boolean).forEach(function (x) {
-    files = files.concat(glob.sync(x))
-  })
-  return files
-}
 
 function requireWatch (file) {
   console.log('Adding files in require tree for ' + file + ' to watcher')
@@ -96,12 +69,40 @@ function watch () {
   if (config.include) includeWatch(config.include)
 }
 
-watch()
-start()
+function start (cb) {
+  cb = cb || function () {}
+  console.log('Starting ' + startFile + ' process')
+  child = fork(startFile, {env: childEnv})
+  child.on('message', function (m) {
+    if (m == 'online') {
+      dispatcher.emit('childOnline')
+      cb()
+    }
+  })
+}
+
+function restart () {
+  if (child.connected) {
+    console.log('Killing ' + startFile + ' process')
+    child.kill()
+  }
+  // XXX Should all files be removed and added again on every restart?
+  console.log('Removing all files from watcher')
+  watcher.removeAll()
+  setTimeout(function () {
+    watch()
+    start()
+  }, 50)
+}
 
 // Reload on any console input
 process.stdin.resume()
 process.stdin.on('data', function (chunk) {
+  restart()
+})
+
+watcher.on('change', function (file, mtime) {
+  console.log('Changed file:', file)
   restart()
 })
 
@@ -129,4 +130,9 @@ http.createServer(function(req, res) {
   }
 }).listen(port, function () {
   console.log('Listening on port', port)
+  watch()
+  // Start the child process, passing online up for testing
+  start(function () {
+    if (process.send) process.send('online')
+  })
 })
