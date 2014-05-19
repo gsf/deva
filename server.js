@@ -85,15 +85,11 @@ function start (cb) {
 function restart () {
   if (child.connected) {
     console.log('Killing ' + startFile + ' process')
+    child.on('exit', start)
     child.kill()
-  }
-  // XXX Should all files be removed and added again on every restart?
-  console.log('Removing all files from watcher')
-  watcher.removeAll()
-  setTimeout(function () {
-    watch()
+  } else {
     start()
-  }, 50)
+  }
 }
 
 // Reload on any console input
