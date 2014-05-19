@@ -5,13 +5,13 @@
   "repository": "git://github.com/gsf/deva.git",
   "license": "ISC",
   "dependencies": {
+    "chokidar": "^0.8.2",
     "detective": "~2.2.0",
-    "resolve": "~0.6.1",
-    "logstamp": "~0.5.2",
-    "filewatcher": "~1.0.0",
     "glob": "~3.2.7",
-    "mkdirp": "~0.3.5",
     "ini": "^1.1.0",
+    "logstamp": "~0.5.2",
+    "mkdirp": "~0.3.5",
+    "resolve": "~0.6.1",
     "tap": "~0.4.9"
   },
   "bin": "./server.js",

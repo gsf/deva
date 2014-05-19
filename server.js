@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+var chokidar = require('chokidar')
 var detective = require('detective')
 var EventEmitter = require('events').EventEmitter
 var fs = require('fs')
@@ -8,7 +9,6 @@ var http = require('http')
 var ini = require('ini')
 var logstamp = require('logstamp')
 var resolve = require('resolve')
-var filewatcher = require('filewatcher')
 var zlib = require('zlib')
 
 
@@ -17,7 +17,7 @@ logstamp(function () {return '[deva] '})
 
 var child = {}
 var cwd = process.cwd()
-var watcher = filewatcher()
+var watcher = chokidar.watch('.', {persistent: true})
 
 // A long-lived thing to pass messages from fleeting children
 var dispatcher = new EventEmitter();
@@ -98,7 +98,7 @@ process.stdin.on('data', function (chunk) {
   restart()
 })
 
-watcher.on('change', function (file, mtime) {
+watcher.on('change', function (file) {
   console.log('Changed file:', file)
   restart()
 })
