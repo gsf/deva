@@ -75,8 +75,9 @@ function start (cb) {
   child = fork(startFile, {env: childEnv})
   child.on('message', function (m) {
     if (m == 'online') {
-      dispatcher.emit('childOnline')
-      cb()
+      dispatcher.emit('online')
+      // Pass the online message up for testing
+      if (process.send) process.send('online')
     }
   })
 }
@@ -112,7 +113,7 @@ http.createServer(function(req, res) {
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'close')
-    dispatcher.once('childOnline', function () {
+    dispatcher.once('online', function () {
       res.write('data: reload\n\n')
     })
   } else {
@@ -131,8 +132,5 @@ http.createServer(function(req, res) {
 }).listen(port, function () {
   console.log('Listening on port', port)
   watch()
-  // Start the child process, passing online up for testing
-  start(function () {
-    if (process.send) process.send('online')
-  })
+  start()
 })
