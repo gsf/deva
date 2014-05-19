@@ -17,6 +17,6 @@
   "bin": "./server.js",
   "browser": "./browser.js",
   "scripts": {
-    "test": "find test -name *-test.js | xargs -n 1 -t node"
+    "test": "find test -name *-test.js | xargs -n 1 -t tap"
   }
 }
