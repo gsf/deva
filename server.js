@@ -63,9 +63,7 @@ function includeWatch (globs) {
 }
 
 function watch () {
-  if (config.require === undefined) requireWatch(runFile)
-  else if (config.require) requireWatch(config.require)
-
+  requireWatch(runFile)
   if (config.include) includeWatch(config.include)
 }
 
