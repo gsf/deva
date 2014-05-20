@@ -43,7 +43,7 @@ var childPort = Math.floor(Math.random()*(Math.pow(2,16)-1024)+1024)
 var childEnv = process.env
 childEnv.PORT = childPort
 
-var startFile = config.file ? config.file.trim() : 'server.js'
+var runFile = config.runfile ? config.runfile.trim() : 'server.js'
 
 function requireWatch (file) {
   console.log('Adding files in require tree for ' + file + ' to watcher')
@@ -63,7 +63,7 @@ function includeWatch (globs) {
 }
 
 function watch () {
-  if (config.require === undefined) requireWatch(startFile)
+  if (config.require === undefined) requireWatch(runFile)
   else if (config.require) requireWatch(config.require)
 
   if (config.include) includeWatch(config.include)
@@ -71,8 +71,8 @@ function watch () {
 
 function start (cb) {
   cb = cb || function () {}
-  console.log('Starting ' + startFile + ' process')
-  child = fork(startFile, {env: childEnv})
+  console.log('Starting ' + runFile + ' process')
+  child = fork(runFile, {env: childEnv})
   child.on('message', function (m) {
     if (m == 'online') {
       dispatcher.emit('online')
@@ -84,7 +84,7 @@ function start (cb) {
 
 function restart () {
   if (child.connected) {
-    console.log('Killing ' + startFile + ' process')
+    console.log('Killing ' + runFile + ' process')
     child.on('exit', start)
     child.kill()
   } else {

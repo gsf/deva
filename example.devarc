@@ -1,19 +1,18 @@
-file = server.js
-require = server.js  ; defaults to the value of file
+runfile = server.js
 include = static/**
-exclude = node_modules/**
+exclude = node_modules
 
 [content]
 command = node compile.js
 require = compile.js
 include = templates/index.html
-exclude = node_modules/**
+exclude = node_modules
 
 [function]
 command = browserify -d browser/main.js > static/bundle.js
 require = browser/main.js
 include = templates/** static/*.html
-exclude = node_modules/**
+exclude = node_modules
 
 [style]
 command = lessc less/styles.less > static/style.css
