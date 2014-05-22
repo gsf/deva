@@ -27,3 +27,7 @@ The default port for deva, 1028, can be overridden with a port variable in the
 global section of the config file or with a PORT environment variable. 1028 was
 chosen to match the number of hymns in the Rig Veda. Apologies if that port is
 already used by Windows DCOM on your system.
+
+## TODO
+Test for and guard against process attempting to restart in quick succession
+(multiple files modified within a second, for example).
