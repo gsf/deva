@@ -17,7 +17,6 @@ logstamp(function () {return '[deva] '})
 
 var child = {}
 var cwd = process.cwd()
-var watcher = chokidar.watch('.', {persistent: true})
 
 // A long-lived thing to pass messages from fleeting children
 var dispatcher = new EventEmitter();
@@ -28,6 +27,7 @@ function loadConfig (file) {
 
 function multiGlob (globs) {
   // Take space-separated globs and return all files
+  globs = globs || ''
   var files = []
   globs.split(/\s+/).filter(Boolean).forEach(function (x) {
     files = files.concat(glob.sync(x))
@@ -44,6 +44,9 @@ var childEnv = process.env
 childEnv.PORT = childPort
 
 var runFile = config.runfile ? config.runfile.trim() : 'server.js'
+var watcher = chokidar.watch(runFile, {persistent: true})
+
+var excluded = multiGlob(config.exclude)
 
 function requireWatch (file) {
   console.log('Adding files in require tree for ' + file + ' to watcher')
@@ -52,7 +55,9 @@ function requireWatch (file) {
     var p = resolve.sync(name, {basedir: cwd})
     if (p.indexOf(cwd) === 0) {
       p = p.substr(cwd.length + 1)
-      watcher.add(p)
+      if (excluded.indexOf(p) == -1) {
+        watcher.add(p)
+      }
     }
   })
 }
