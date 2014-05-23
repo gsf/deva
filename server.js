@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-var chokidar = require('chokidar')
 var detective = require('detective')
 var EventEmitter = require('events').EventEmitter
 var fs = require('fs')
@@ -15,8 +14,9 @@ var zlib = require('zlib')
 // Stamp logs from this process
 logstamp(function () {return '[deva] '})
 
-var child = {}
+var child = null
 var cwd = process.cwd()
+var online = false
 
 // A long-lived thing to pass messages from fleeting children
 var dispatcher = new EventEmitter();
@@ -44,32 +44,32 @@ var childEnv = process.env
 childEnv.PORT = childPort
 
 var runFile = config.runfile ? config.runfile.trim() : 'server.js'
-var watcher = chokidar.watch(runFile, {persistent: true})
-
-var excluded = multiGlob(config.exclude)
+var filesToWatch = []
+var filesToExclude = multiGlob(config.exclude)
 
 function requireWatch (file) {
   console.log('Adding files in require tree for ' + file + ' to watcher')
-  watcher.add(file)
+  filesToWatch.push(file)
   detective(fs.readFileSync(file)).forEach(function (name) {
     var p = resolve.sync(name, {basedir: cwd})
     if (p.indexOf(cwd) === 0) {
       p = p.substr(cwd.length + 1)
-      if (excluded.indexOf(p) == -1) {
-        watcher.add(p)
-      }
+      if (filesToExclude.indexOf(p) == -1) filesToWatch.push(p)
     }
   })
 }
 
 function includeWatch (globs) {
   console.log('Adding files in "' + globs + '" to watcher')
-  multiGlob(globs).forEach(watcher.add, watcher)
+  multiGlob(globs).forEach(function (p) {
+    if (filesToExclude.indexOf(p) == -1) filesToWatch.push(p)
+  })
 }
 
 function watch () {
   requireWatch(runFile)
   if (config.include) includeWatch(config.include)
+  filesToWatch.forEach(function (file) {fs.watch(file, restart)})
 }
 
 function start (cb) {
@@ -78,6 +78,7 @@ function start (cb) {
   child = fork(runFile, {env: childEnv})
   child.on('message', function (m) {
     if (m == 'online') {
+      online = true
       dispatcher.emit('online')
       // Pass the online message up for testing
       if (process.send) process.send('online')
@@ -86,25 +87,18 @@ function start (cb) {
 }
 
 function restart () {
-  if (child.connected) {
-    console.log('Killing ' + runFile + ' process')
-    child.on('exit', start)
-    child.kill()
-  } else {
-    start()
-  }
+  // Avoid overlaps in restarting
+  if (!online) return
+
+  console.log('Killing ' + runFile + ' process')
+  online = false
+  child.on('exit', start)
+  child.kill()
 }
 
 // Reload on any console input
 process.stdin.resume()
-process.stdin.on('data', function (chunk) {
-  restart()
-})
-
-watcher.on('change', function (file) {
-  console.log('Changed file:', file)
-  restart()
-})
+process.stdin.on('data', restart)
 
 // Hacky proxy
 http.createServer(function(req, res) {

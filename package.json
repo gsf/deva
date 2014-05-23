@@ -5,14 +5,12 @@
   "repository": "git://github.com/gsf/deva.git",
   "license": "ISC",
   "dependencies": {
-    "chokidar": "^0.8.2",
     "detective": "~2.2.0",
     "glob": "~3.2.7",
     "ini": "^1.1.0",
     "logstamp": "~0.5.2",
     "mkdirp": "~0.3.5",
-    "resolve": "~0.6.1",
-    "tap": "~0.4.9"
+    "resolve": "~0.6.1"
   },
   "bin": "./server.js",
   "browser": "./browser.js",
@@ -20,6 +18,7 @@
     "test": "find test -name *-test.js | xargs -n 1 -t tap"
   },
   "devDependencies": {
+    "tap": "~0.4.9",
     "touch": "0.0.3"
   }
 }

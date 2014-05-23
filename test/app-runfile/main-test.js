@@ -27,10 +27,7 @@ test('modification of required file reloads child process', function (t) {
 
 test('return file to original state', function (t) {
   t.plan(1)
-  // Pause longer than watch interval before writing to file again
-  setTimeout(function () {
-    fs.writeFileSync(__dirname + '/res.js', 'module.exports = function (res) {\n  res.end(\'ok\')\n}')
-  }, 1000)
+  fs.writeFileSync(__dirname + '/res.js', 'module.exports = function (res) {\n  res.end(\'ok\')\n}')
   test.server.once('online', function () {
     http.get({port: 1028}, function (res) {
       res.on('data', function (data) {
