@@ -16,7 +16,6 @@ test('server process responds to requests', function (t) {
 
 test('touching vendor file does not restart process', function (t) {
   t.plan(1)
-  //fs.writeFileSync(__dirname + '/vendor/res.js', 'module.exports = function (res) {\n  res.end(\'okay\')\n}')
   touch.sync(__dirname + '/vendor/res.js')
   http.get({port: 1028}, function (res) {
     res.on('data', function (data) {
