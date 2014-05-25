@@ -127,10 +127,6 @@ function restart () {
   child.kill()
 }
 
-// Reload on any console input
-process.stdin.resume()
-process.stdin.on('data', restart)
-
 // Hacky proxy
 http.createServer(function(req, res) {
   if (RegExp('^/_reload').test(req.url)) {
