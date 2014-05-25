@@ -15,7 +15,7 @@
   "bin": "./server.js",
   "browser": "./browser.js",
   "scripts": {
-    "test": "find test -name *-test.js | xargs -n 1 -t tap"
+    "test": "tap test/*/*-test.js"
   },
   "devDependencies": {
     "tap": "~0.4.9",
