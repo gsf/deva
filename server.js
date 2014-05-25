@@ -43,18 +43,6 @@ function watchFile (file, cb) {
   fs.watch(file, cb)
 }
 
-function requireWatch (file, excluded, cb) {
-  if (!file) return
-  watchFile(file, cb)
-  detective(fs.readFileSync(file)).forEach(function (name) {
-    var p = resolve.sync(name, {basedir: cwd})
-    if (p.indexOf(cwd) === 0) {
-      p = p.substr(cwd.length + 1)
-      if (excluded.indexOf(p) == -1) watchFile(p, cb)
-    }
-  })
-}
-
 function includeWatch (globs, excluded, cb) {
   multiGlob(globs).forEach(function (p) {
     if (excluded.indexOf(p) == -1) watchFile(p, cb)
@@ -69,11 +57,9 @@ var commandRunning = false
 // Handle config sections
 Object.keys(config).forEach(function (key) {
   var val = config[key]
-  var excluded
   var cb
   var lastRun = 0
   if (val.command) {
-    excluded = multiGlob(val.exclude)
     cb = function () {
       if (commandRunning) return
       commandRunning = true
@@ -89,8 +75,7 @@ Object.keys(config).forEach(function (key) {
         restart()
       })
     }
-    includeWatch(val.include, excluded, cb)
-    requireWatch(val.require, excluded, cb)
+    includeWatch(val.include, multiGlob(val.exclude), cb)
     cb()
   }
 })
@@ -101,11 +86,19 @@ var childEnv = process.env
 childEnv.PORT = childPort
 
 var runFile = config.runfile ? config.runfile.trim() : 'server.js'
-var filesToExclude = multiGlob(config.exclude)
 
 function watch () {
-  requireWatch(runFile, filesToExclude, restart)
-  if (config.include) includeWatch(config.include, filesToExclude, restart)
+  var excluded = multiGlob(config.exclude)
+  watchFile(runFile, restart)
+  detective(fs.readFileSync(runFile)).forEach(function (name) {
+    var p = resolve.sync(name, {basedir: cwd})
+    if (p.indexOf(cwd) === 0) {
+      p = p.substr(cwd.length + 1)
+      if (excluded.indexOf(p) == -1) watchFile(p, restart)
+    }
+  })
+
+  if (config.include) includeWatch(config.include, excluded, restart)
 }
 
 function start () {
