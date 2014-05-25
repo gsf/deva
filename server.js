@@ -2,13 +2,12 @@
 var detective = require('detective')
 var EventEmitter = require('events').EventEmitter
 var fs = require('fs')
-var fork = require('child_process').fork
+var cp = require('child_process')
 var glob = require('glob')
 var http = require('http')
 var ini = require('ini')
 var logstamp = require('logstamp')
 var resolve = require('resolve')
-var zlib = require('zlib')
 
 
 // Stamp logs from this process
@@ -19,7 +18,11 @@ var cwd = process.cwd()
 var online = false
 
 // A long-lived thing to pass messages from fleeting children
-var dispatcher = new EventEmitter();
+var dispatcher = new EventEmitter()
+
+function debug () {
+  process.env.DEVA_DEBUG && console.log.apply(this, arguments)
+}
 
 function loadConfig (file) {
   return fs.existsSync(file) && ini.parse(fs.readFileSync(file, 'utf8'))
@@ -35,47 +38,79 @@ function multiGlob (globs) {
   return files
 }
 
+function watchFile (file, cb) {
+  debug('Watching file:', file)
+  fs.watch(file, cb)
+}
+
+function requireWatch (file, excluded, cb) {
+  if (!file) return
+  watchFile(file, cb)
+  detective(fs.readFileSync(file)).forEach(function (name) {
+    var p = resolve.sync(name, {basedir: cwd})
+    if (p.indexOf(cwd) === 0) {
+      p = p.substr(cwd.length + 1)
+      if (excluded.indexOf(p) == -1) watchFile(p, cb)
+    }
+  })
+}
+
+function includeWatch (globs, excluded, cb) {
+  multiGlob(globs).forEach(function (p) {
+    if (excluded.indexOf(p) == -1) watchFile(p, cb)
+  })
+}
+
 var config = loadConfig('.devarc') ||
   loadConfig(process.env.HOME + '/.devarc') || {}
+debug('Parsed config:', config)
 
-var port = process.env.PORT || config.port || 1028;
+var commandRunning = false
+// Handle config sections
+Object.keys(config).forEach(function (key) {
+  var val = config[key]
+  var excluded
+  var cb
+  var lastRun = 0
+  if (val.command) {
+    excluded = multiGlob(val.exclude)
+    cb = function () {
+      if (commandRunning) return
+      commandRunning = true
+
+      debug('Running', '"' + val.command + '"')
+
+      cp.exec(val.command, {env: process.env}, function (err, stdout, stderr) {
+        if (err) process.stderr.write('[deva:'+key+'] '+err)
+        if (stdout) process.stdout.write('[deva:'+key+'] '+stdout)
+        if (stderr) process.stderr.write('[deva:'+key+'] '+stderr)
+
+        commandRunning = false
+        restart()
+      })
+    }
+    includeWatch(val.include, excluded, cb)
+    requireWatch(val.require, excluded, cb)
+    cb()
+  }
+})
+
+var port = process.env.PORT || config.port || 1028
 var childPort = Math.floor(Math.random()*(Math.pow(2,16)-1024)+1024)
 var childEnv = process.env
 childEnv.PORT = childPort
 
 var runFile = config.runfile ? config.runfile.trim() : 'server.js'
-var filesToWatch = []
 var filesToExclude = multiGlob(config.exclude)
 
-function requireWatch (file) {
-  console.log('Adding files in require tree for ' + file + ' to watcher')
-  filesToWatch.push(file)
-  detective(fs.readFileSync(file)).forEach(function (name) {
-    var p = resolve.sync(name, {basedir: cwd})
-    if (p.indexOf(cwd) === 0) {
-      p = p.substr(cwd.length + 1)
-      if (filesToExclude.indexOf(p) == -1) filesToWatch.push(p)
-    }
-  })
-}
-
-function includeWatch (globs) {
-  console.log('Adding files in "' + globs + '" to watcher')
-  multiGlob(globs).forEach(function (p) {
-    if (filesToExclude.indexOf(p) == -1) filesToWatch.push(p)
-  })
-}
-
 function watch () {
-  requireWatch(runFile)
-  if (config.include) includeWatch(config.include)
-  filesToWatch.forEach(function (file) {fs.watch(file, restart)})
+  requireWatch(runFile, filesToExclude, restart)
+  if (config.include) includeWatch(config.include, filesToExclude, restart)
 }
 
-function start (cb) {
-  cb = cb || function () {}
-  console.log('Starting ' + runFile + ' process')
-  child = fork(runFile, {env: childEnv})
+function start () {
+  console.log('Starting ' + runFile + ' child process')
+  child = cp.fork(runFile, {env: childEnv})
   child.on('message', function (m) {
     if (m == 'online') {
       online = true
@@ -90,8 +125,11 @@ function restart () {
   // Avoid overlaps in restarting
   if (!online) return
 
-  console.log('Killing ' + runFile + ' process')
+  // Wait for command callback if file changes triggered by command
+  if (commandRunning) return
+
   online = false
+  console.log('Killing ' + runFile + ' child process')
   child.on('exit', start)
   child.kill()
 }

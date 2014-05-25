@@ -1,0 +1,5 @@
+include = static/**
+
+[files]
+command = cat files/a.txt files/b.txt > static/files.txt
+include = files/**
