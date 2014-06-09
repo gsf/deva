@@ -121,7 +121,6 @@ function stop () {
   console.log('Killing ' + runFile + ' child process')
   online = false
   child.kill()
-  child.disconnect()
 }
 
 function restart () {
@@ -141,13 +140,14 @@ function restart () {
   }
 }
 
+// Cleanup when kill signal received
+process.on('SIGTERM', function () {
+  if (child) child.kill()
+  process.exit()
+})
+
 // Hacky proxy
 http.createServer(function(req, res) {
-  //if (!child) {
-  //  res.writeHead(502)
-  //  res.end('Child process not running')
-  //  return
-  //}
   if (RegExp('^/_reload').test(req.url)) {
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')

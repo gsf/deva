@@ -16,8 +16,8 @@ module.exports = function (cwd) {
     test.server.once('online', function () {t.ok(true, 'server online')})
   })
   tap.on('end', function () {
+    test.server.on('exit', process.exit)
     test.server.kill()
-    test.server.on('exit', function () {setTimeout(process.exit, 500)})
   })
   return test
 }
