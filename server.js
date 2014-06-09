@@ -112,23 +112,42 @@ function start () {
       if (process.send) process.send('online')
     }
   })
+  child.once('exit', function () {
+    child = null
+  })
+}
+
+function stop () {
+  console.log('Killing ' + runFile + ' child process')
+  online = false
+  child.kill()
+  child.disconnect()
 }
 
 function restart () {
-  // Avoid overlaps in restarting
-  if (!online) return
+  if (child) {
+    // Avoid overlaps in restarting
+    if (!online) return
 
-  // Wait for command callback if file changes triggered by command
-  if (commandRunning) return
+    // Wait for command callback if file changes triggered by command
+    if (commandRunning) return
 
-  online = false
-  console.log('Killing ' + runFile + ' child process')
-  child.on('exit', start)
-  child.kill()
+    child.once('exit', start)
+    stop()
+  }
+  else {
+    // Child already stopped
+    start()
+  }
 }
 
 // Hacky proxy
 http.createServer(function(req, res) {
+  //if (!child) {
+  //  res.writeHead(502)
+  //  res.end('Child process not running')
+  //  return
+  //}
   if (RegExp('^/_reload').test(req.url)) {
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
@@ -136,19 +155,23 @@ http.createServer(function(req, res) {
     dispatcher.once('online', function () {
       res.write('data: reload\n\n')
     })
-  } else {
-    var clientReq = http.request({
-      port: childPort,
-      method: req.method,
-      path: req.url,
-      headers: req.headers
-    }, function (clientRes) {
-      res.writeHead(clientRes.statusCode, clientRes.headers)
-      clientRes.pipe(res)
-    })
-    req.pipe(clientReq)
-    clientReq.on('error', function (e) {console.error(e.message)})
+    return
   }
+  var clientReq = http.request({
+    port: childPort,
+    method: req.method,
+    path: req.url,
+    headers: req.headers
+  }, function (clientRes) {
+    res.writeHead(clientRes.statusCode, clientRes.headers)
+    clientRes.pipe(res)
+  })
+  req.pipe(clientReq)
+  clientReq.on('error', function (e) {
+    console.error(e.message)
+    res.writeHead(502)
+    res.end('Error reaching proxied server')
+  })
 }).listen(port, function () {
   console.log('Listening on port', port)
   watch()

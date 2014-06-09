@@ -8,7 +8,6 @@ module.exports = function (cwd) {
   test('setup', function (t) {
     t.plan(1)
     test.server = fork(__dirname + '/../server', {cwd: cwd, silent: true})
-    test.server.stderr.pipe(process.stderr)
     test.server.on('message', function (m) {
       if (m == 'online') {
         test.server.emit('online')
