@@ -40,7 +40,10 @@ function multiGlob (globs) {
 
 function watchFile (file, cb) {
   debug('Watching file:', file)
-  fs.watch(file, cb)
+  fs.watch(file, function () {
+    debug('File changed:', file)
+    cb()
+  })
 }
 
 function includeWatch (globs, excluded, cb) {
