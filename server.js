@@ -75,7 +75,7 @@ Object.keys(config).forEach(function (key) {
         if (stderr) process.stderr.write('[deva:'+key+'] '+stderr)
 
         commandRunning = false
-        restart()
+        scheduleRestart()
       })
     }
     includeWatch(val.include, multiGlob(val.exclude), cb)
@@ -92,27 +92,31 @@ var runFile = config.runfile ? config.runfile.trim() : 'server.js'
 
 function watch () {
   var excluded = multiGlob(config.exclude)
-  watchFile(runFile, restart)
+  watchFile(runFile, scheduleRestart)
   detective(fs.readFileSync(runFile)).forEach(function (name) {
     var p = resolve.sync(name, {basedir: cwd})
     if (p.indexOf(cwd) === 0) {
       p = p.substr(cwd.length + 1)
-      if (excluded.indexOf(p) == -1) watchFile(p, restart)
+      if (excluded.indexOf(p) == -1) watchFile(p, scheduleRestart)
     }
   })
 
-  if (config.include) includeWatch(config.include, excluded, restart)
+  if (config.include) includeWatch(config.include, excluded, scheduleRestart)
 }
+
+dispatcher.on('online', function () {
+  online = true
+  // Pass the online message up for testing
+  if (process.send) process.send('online')
+})
 
 function start () {
   console.log('Starting ' + runFile + ' child process')
   child = cp.fork(runFile, {env: childEnv})
   child.on('message', function (m) {
     if (m == 'online') {
-      online = true
+      debug('Child online')
       dispatcher.emit('online')
-      // Pass the online message up for testing
-      if (process.send) process.send('online')
     }
   })
   child.once('exit', function () {
@@ -126,7 +130,17 @@ function stop () {
   child.kill()
 }
 
+var scheduledAt = 0
+function scheduleRestart () {
+  // Throttling: wait a second before restart and reset timer each time
+  scheduledAt = new Date()
+  setTimeout(restart, 1000)
+}
+
 function restart () {
+  if ((new Date()) - scheduledAt < 1000) {
+    return
+  }
   if (child) {
     // Avoid overlaps in restarting
     if (!online) return
@@ -171,7 +185,7 @@ http.createServer(function(req, res) {
   })
   req.pipe(clientReq)
   clientReq.on('error', function (e) {
-    console.error(e.message)
+    debug(e.message)
     res.writeHead(502)
     res.end('Error reaching proxied server')
   })
