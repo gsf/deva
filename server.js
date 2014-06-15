@@ -185,7 +185,7 @@ http.createServer(function(req, res) {
   })
   req.pipe(clientReq)
   clientReq.on('error', function (e) {
-    debug(e.message)
+    console.error(e.message)
     res.writeHead(502)
     res.end('Error reaching proxied server')
   })
