@@ -134,11 +134,11 @@ var scheduledAt = 0
 function scheduleRestart () {
   // Throttling: wait a second before restart and reset timer each time
   scheduledAt = new Date()
-  setTimeout(restart, 1000)
+  setTimeout(restart, 500)
 }
 
 function restart () {
-  if ((new Date()) - scheduledAt < 1000) {
+  if ((new Date()) - scheduledAt < 500) {
     return
   }
   if (child) {
