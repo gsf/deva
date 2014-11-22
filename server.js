@@ -132,18 +132,24 @@ function stop () {
 
 var scheduledAt = 0
 function scheduleRestart () {
+  debug('Scheduling restart...')
   // Throttling: wait a second before restart and reset timer each time
   scheduledAt = new Date()
   setTimeout(restart, 500)
 }
 
 function restart () {
+  debug('Restart called')
   if ((new Date()) - scheduledAt < 500) {
+    debug('Restart throttled')
     return
   }
   if (child) {
     // Avoid overlaps in restarting
-    if (!online) return
+    if (!online) {
+      debug('Child running but not online')
+      return
+    }
 
     // Wait for command callback if file changes triggered by command
     if (commandRunning) return
