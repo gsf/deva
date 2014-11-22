@@ -1,3 +1,4 @@
+port = 10552
 runfile = server.js
 include = static/**
 exclude = node_modules
